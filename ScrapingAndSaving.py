@@ -4,32 +4,52 @@ from itertools import chain
 import xlsxwriter
 #Scraping, Visualizing, and Analyzing MLB Player Data 
 ###Step 1:> Scraping and Cleaning
-#get html
-page = requests.get('https://www.mlb.com/stats/')
-soup = BeautifulSoup(page.content, 'html.parser')
+#get html/put mlb stat sites here
+sites = [
+    'https://www.mlb.com/stats/',
+    'https://www.mlb.com/stats/?page=2',
+    'https://www.mlb.com/stats/?page=3',
+    'https://www.mlb.com/stats/?page=4',
+    'https://www.mlb.com/stats/?page=5',
+    'https://www.mlb.com/stats/?page=6',
+    'https://www.mlb.com/stats/?page=7'
+]
+def getRequests(locs):
+    reqs = []
+    for loc in locs:
+        page = requests.get(loc)
+        reqs.append(BeautifulSoup(page.content, 'html.parser'))
+    return reqs
 
-#get the data
-data_tags = soup.find_all('td')
+soups = []
 raw_data = []
-for dp in data_tags:
-    raw_data.append(dp.contents)
+data_tags = []
+player_tags = []
+player_raw = []
+soups = getRequests(sites)
+for i in range(len(soups)):
+    #get the data
+    data_tags = soups[i].find_all('td')
+    for dp in data_tags:
+        raw_data.append(dp.contents)
+    #get player names
+    player_tags = soups[i].find_all('span', class_="full-3fV3c9pF")
+    for tag in player_tags:
+        player_raw.append(tag.contents)
 
 #get categories, eg runs, hrs, homeruns
-column_category_tags = soup.find_all('abbr', class_="bui-text cellheader bui-text")
+column_category_tags = soups[0].find_all('abbr', class_="bui-text cellheader bui-text")
 cats = []
 for cat in column_category_tags:
     cats.append(cat.contents)
-
-#get player names
-player_tags = soup.find_all('span', class_="full-3fV3c9pF")
-player_raw = []
-for player in player_tags:
-    player_raw.append(player.contents)
+    
 #flatten the data
 cats = list(chain.from_iterable(cats))
 flattened_data = list(chain.from_iterable(raw_data))
-player_flat = list(chain.from_iterable(player_raw))
+player_flat = list(chain.from_iterable(player_raw))\
+
 #join first and last names of the player, eg [['jane'], ['doe']...] to ['jane doe'...]
+print(cats)
 first = []
 last = []
 for i in range(len(player_flat)):
@@ -40,6 +60,7 @@ for i in range(len(player_flat)):
 player_names = []
 for i in range(len(last)):
     player_names.append(first[i] + ' ' + last[i])
+    
 #remove team abbr, add num, and find len of rows
 teams = []
 t_num = 0
